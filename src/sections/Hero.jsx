@@ -58,10 +58,10 @@ export default function Hero({ isReady }) {
 
       tl.fromTo(dotRef.current,
         { opacity: 0, scale: 0 },
-        { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, '-=0.3')   // role k baad dot aaye
+        { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, '-=0.3')
 
       tl.to(lineRef.current,
-        { opacity: 1, scaleX: 1, transformOrigin: 'center center', duration: 1.0, ease: 'expo.inOut' })  // dot k baad line
+        { opacity: 1, scaleX: 1, transformOrigin: 'center center', duration: 1.0, ease: 'expo.inOut' })
 
       tl.fromTo(lineRef.current,
         { boxShadow: '0 0 0px rgba(0,212,255,0)' },

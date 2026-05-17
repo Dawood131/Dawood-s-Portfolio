@@ -81,37 +81,37 @@ export default function Preloader({ onComplete }) {
       { opacity: 0, duration: 0.4 }
     )
 
-   tl.add(() => {
-  const nameEl = nameRef.current
-  if (!nameEl || !containerRef.current) return
+    tl.add(() => {
+      const nameEl = nameRef.current
+      if (!nameEl || !containerRef.current) return
 
-  const isMobile = window.innerWidth < 768
+      const isMobile = window.innerWidth < 768
 
-  if (isMobile) {
-    const nameBounds = nameEl.getBoundingClientRect()
-    const computedSize = parseFloat(window.getComputedStyle(nameEl).fontSize)
+      if (isMobile) {
+        const nameBounds = nameEl.getBoundingClientRect()
+        const computedSize = parseFloat(window.getComputedStyle(nameEl).fontSize)
 
-    const TARGET_LEFT = 24
-    const TARGET_TOP = 22
-    const TARGET_W = 160
+        const TARGET_LEFT = 24
+        const TARGET_TOP = 22
+        const TARGET_W = 160
 
-    const scale = TARGET_W / nameBounds.width
-    const finalFontSize = computedSize * scale
+        const scale = TARGET_W / nameBounds.width
+        const finalFontSize = computedSize * scale
 
-    const dx = TARGET_LEFT - nameBounds.left
-    const dy = TARGET_TOP - nameBounds.top
+        const dx = TARGET_LEFT - nameBounds.left
+        const dy = TARGET_TOP - nameBounds.top
 
-    gsap.to(nameEl, {
-      x: dx,
-      y: dy,
-      scale,
-      transformOrigin: 'top left',
-      duration: 1,
-      ease: 'power4.inOut',
-      onComplete() {
-        const clone = document.createElement('div')
-        clone.textContent = 'DAWOOD BUTT'
-        clone.style.cssText = `
+        gsap.to(nameEl, {
+          x: dx,
+          y: dy,
+          scale,
+          transformOrigin: 'top left',
+          duration: 1,
+          ease: 'power4.inOut',
+          onComplete() {
+            const clone = document.createElement('div')
+            clone.textContent = 'DAWOOD BUTT'
+            clone.style.cssText = `
           position: fixed;
           top: ${TARGET_TOP}px;
           left: ${TARGET_LEFT}px;
@@ -126,67 +126,67 @@ export default function Preloader({ onComplete }) {
           z-index: 40;
           pointer-events: none;
         `
-        document.body.appendChild(clone)
+            document.body.appendChild(clone)
 
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          duration: 0.35,
+            gsap.to(containerRef.current, {
+              opacity: 0,
+              duration: 0.35,
+              onComplete() {
+                enableScroll()
+                onComplete()
+              },
+            })
+          }
+        })
+
+      } else {
+        const target = document.querySelector('#navbar-logo-target')
+        if (!target) {
+          if (!containerRef.current) return
+          gsap.to(containerRef.current, {
+            opacity: 0,
+            duration: 0.5,
+            onComplete() {
+              enableScroll()
+              onComplete()
+            },
+          })
+          return
+        }
+
+        const computedSize = parseFloat(window.getComputedStyle(nameEl).fontSize)
+        const nameBounds = nameEl.getBoundingClientRect()
+        const targetBounds = target.getBoundingClientRect()
+
+        const dx = targetBounds.left - nameBounds.left
+        const dy = targetBounds.top - nameBounds.top
+        const scale = targetBounds.width / nameBounds.width
+
+        window.__preloaderFontSize = computedSize * scale
+        window.__preloaderScale = scale
+
+        gsap.to(nameEl, {
+          x: dx,
+          y: dy,
+          scale,
+          transformOrigin: 'top left',
+          duration: 1,
+          ease: 'power4.inOut',
           onComplete() {
-            enableScroll()
-            onComplete()
-          },
+            window.dispatchEvent(new CustomEvent('preloader-done'))
+            if (!containerRef.current) return
+            gsap.to(containerRef.current, {
+              opacity: 0,
+              duration: 0.35,
+              onComplete() {
+                enableScroll()
+                onComplete()
+              },
+            })
+          }
         })
       }
     })
-
-  } else {
-    const target = document.querySelector('#navbar-logo-target')
-    if (!target) {
-      if (!containerRef.current) return
-      gsap.to(containerRef.current, {
-        opacity: 0,
-        duration: 0.5,
-        onComplete() {
-          enableScroll()
-          onComplete()
-        },
-      })
-      return
-    }
-
-    const computedSize = parseFloat(window.getComputedStyle(nameEl).fontSize)
-    const nameBounds = nameEl.getBoundingClientRect()
-    const targetBounds = target.getBoundingClientRect()
-
-    const dx = targetBounds.left - nameBounds.left
-    const dy = targetBounds.top - nameBounds.top
-    const scale = targetBounds.width / nameBounds.width
-
-    window.__preloaderFontSize = computedSize * scale
-    window.__preloaderScale = scale
-
-    gsap.to(nameEl, {
-      x: dx,
-      y: dy,
-      scale,
-      transformOrigin: 'top left',
-      duration: 1,
-      ease: 'power4.inOut',
-      onComplete() {
-        window.dispatchEvent(new CustomEvent('preloader-done'))
-        if (!containerRef.current) return
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          duration: 0.35,
-          onComplete() {
-            enableScroll()
-            onComplete()
-          },
-        })
-      }
-    })
-  }
-})
 
   }, [])
 
@@ -227,8 +227,8 @@ export default function Preloader({ onComplete }) {
           ref={subtitleRef}
           style={{
             opacity: 0,
-            fontSize: '0.65rem',
-            letterSpacing: '0.5em',
+            fontSize: window.innerWidth < 768 ? '0.65rem' : '0.9rem',
+            letterSpacing: window.innerWidth < 768 ? '0.5em' : '0.7em',
             textTransform: 'uppercase',
             color: 'rgba(255,255,255,0.3)',
             margin: 0,
@@ -245,10 +245,10 @@ export default function Preloader({ onComplete }) {
         right: '32px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', olor: 'rgba(255,255,255,0.75)', }}>
             Loading
           </span>
-          <span ref={percentRef} style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>0%</span>
+          <span ref={percentRef} style={{ fontSize: '10px', olor: 'rgba(255,255,255,0.75)', }}>0%</span>
         </div>
         <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}>
           <div

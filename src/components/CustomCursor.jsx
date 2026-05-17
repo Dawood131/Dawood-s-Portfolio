@@ -1,111 +1,101 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 
-// ─── Mobile touch ripple ───────────────────────────────────────────────────
-function TouchRipple() {
-  const [ripples, setRipples] = useState([])
+function MobileTrail() {
+  const canvasRef = useRef(null)
+  const points = useRef([])
+  const animRef = useRef(null)
+  const touching = useRef(false)
 
   useEffect(() => {
-    const onTouch = (e) => {
-      const touch = e.touches[0]
-      const id = Date.now() + Math.random()
-      const x = touch.clientX
-      const y = touch.clientY
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
 
-      setRipples((prev) => [...prev, { id, x, y }])
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
 
-      // Remove after animation completes
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r.id !== id))
-      }, 700)
+    const onTouchMove = (e) => {
+      touching.current = true
+      const t = e.touches[0]
+      points.current.push({
+        x: t.clientX,
+        y: t.clientY,
+        age: 0,
+        size: 5,
+      })
+      if (points.current.length > 28) points.current.shift()
     }
 
-    window.addEventListener('touchstart', onTouch, { passive: true })
-    return () => window.removeEventListener('touchstart', onTouch)
+    const onTouchEnd = () => {
+      touching.current = false
+    }
+
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+    window.addEventListener('touchend', onTouchEnd)
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      points.current = points.current
+        .map(p => ({ ...p, age: p.age + 1 }))
+        .filter(p => p.age < 22)
+
+      points.current.forEach((p, i) => {
+        const total = points.current.length
+        const life = 1 - p.age / 22
+        const size = life * 5.5
+
+        const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3.5)
+        glow.addColorStop(0, `rgba(0,229,255,${life * 0.18})`)
+        glow.addColorStop(1, 'rgba(0,229,255,0)')
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, size * 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = glow
+        ctx.fill()
+
+        // core dot
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(0,229,255,${life * 0.85})`
+        ctx.shadowColor = 'rgba(0,229,255,0.9)'
+        ctx.shadowBlur = 10
+        ctx.fill()
+        ctx.shadowBlur = 0
+      })
+
+      animRef.current = requestAnimationFrame(draw)
+    }
+
+    draw()
+
+    return () => {
+      window.removeEventListener('resize', resize)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+      cancelAnimationFrame(animRef.current)
+    }
   }, [])
 
   return (
-    <>
-      {ripples.map((r) => (
-        <RippleDot key={r.id} x={r.x} y={r.y} />
-      ))}
-    </>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+        zIndex: 99999,
+      }}
+    />
   )
 }
 
-function RippleDot({ x, y }) {
-  const dotRef = useRef(null)
-  const ring1Ref = useRef(null)
-  const ring2Ref = useRef(null)
-
-  useEffect(() => {
-    const dot = dotRef.current
-    const ring1 = ring1Ref.current
-    const ring2 = ring2Ref.current
-    if (!dot || !ring1 || !ring2) return
-
-    // Center dot — quick flash
-    gsap.fromTo(dot,
-      { scale: 0, opacity: 1 },
-      { scale: 1, opacity: 0, duration: 0.4, ease: 'power2.out' }
-    )
-
-    // Ring 1 — expand outward
-    gsap.fromTo(ring1,
-      { scale: 0, opacity: 0.7 },
-      { scale: 2.5, opacity: 0, duration: 0.6, ease: 'power2.out' }
-    )
-
-    // Ring 2 — slower, bigger
-    gsap.fromTo(ring2,
-      { scale: 0, opacity: 0.4 },
-      { scale: 4, opacity: 0, duration: 0.7, delay: 0.05, ease: 'power2.out' }
-    )
-  }, [])
-
-  const base = {
-    position: 'fixed',
-    top: y,
-    left: x,
-    pointerEvents: 'none',
-    zIndex: 99999,
-    transform: 'translate(-50%, -50%)',
-    borderRadius: '50%',
-  }
-
-  return (
-    <>
-      {/* Center dot */}
-      <div ref={dotRef} style={{
-        ...base,
-        width: '10px',
-        height: '10px',
-        background: '#00E5FF',
-        boxShadow: '0 0 12px rgba(0,229,255,0.8), 0 0 24px rgba(0,229,255,0.4)',
-      }} />
-
-      {/* Ring 1 */}
-      <div ref={ring1Ref} style={{
-        ...base,
-        width: '36px',
-        height: '36px',
-        border: '1.5px solid rgba(0,229,255,0.7)',
-        background: 'transparent',
-      }} />
-
-      {/* Ring 2 */}
-      <div ref={ring2Ref} style={{
-        ...base,
-        width: '36px',
-        height: '36px',
-        border: '1px solid rgba(0,229,255,0.3)',
-        background: 'transparent',
-      }} />
-    </>
-  )
-}
-
-// ─── Desktop custom cursor ─────────────────────────────────────────────────
+// ─── Desktop: full custom cursor ──────────────────────────────────────────
 function DesktopCursor() {
   const cursorRef = useRef(null)
   const followerRef = useRef(null)
@@ -127,12 +117,7 @@ function DesktopCursor() {
 
     const onMove = (e) => {
       pos.current = { x: e.clientX, y: e.clientY }
-      gsap.to(cursor, {
-        x: e.clientX,
-        y: e.clientY,
-        duration: 0.08,
-        ease: 'power3.out',
-      })
+      gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.08, ease: 'power3.out' })
     }
 
     window.addEventListener('mousemove', onMove)
@@ -154,12 +139,7 @@ function DesktopCursor() {
         if (!trail) return
         const opacity = isHovering.current ? 0 : (1 - i / trailCount) * 0.4
         const scale = 1 - (i / trailCount) * 0.75
-        gsap.set(trail, {
-          x: trailPositions[i].x,
-          y: trailPositions[i].y,
-          opacity,
-          scale,
-        })
+        gsap.set(trail, { x: trailPositions[i].x, y: trailPositions[i].y, opacity, scale })
       })
     }
 
@@ -168,7 +148,6 @@ function DesktopCursor() {
     const onEnter = (e) => {
       isHovering.current = true
       const isMagnetic = e.currentTarget.dataset.magnetic !== undefined
-
       gsap.to(cursor, { scale: 0, opacity: 0, duration: 0.25, ease: 'power3.out' })
       gsap.to(follower, {
         scale: isMagnetic ? 1.5 : 1.7,
@@ -202,7 +181,6 @@ function DesktopCursor() {
       gsap.timeline()
         .to(follower, { scale: isHovering.current ? 1.1 : 0.6, duration: 0.1, ease: 'power2.in' })
         .to(follower, { scale: isHovering.current ? 1.25 : 1, duration: 0.55, ease: 'elastic.out(1, 0.35)' })
-
       gsap.timeline()
         .to(cursor, { scale: 3, opacity: 0, duration: 0.35, ease: 'power2.out' })
         .set(cursor, { scale: 1, opacity: 1 })
@@ -213,7 +191,6 @@ function DesktopCursor() {
       el.addEventListener('mouseenter', onEnter)
       el.addEventListener('mouseleave', onLeave)
     })
-
     window.addEventListener('click', onClick)
 
     return () => {
@@ -240,60 +217,43 @@ function DesktopCursor() {
 
   return (
     <>
-      {/* Dot */}
-      <div
-        ref={cursorRef}
-        style={{
-          ...sharedStyle,
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: '#00E5FF',
-          boxShadow: '0 0 8px rgba(0,229,255,1), 0 0 20px rgba(0,229,255,0.5), 0 0 40px rgba(0,229,255,0.2)',
-        }}
-      />
-
-      {/* Follower ring */}
-      <div
-        ref={followerRef}
-        style={{
-          ...sharedStyle,
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          borderWidth: '1px',
-          borderStyle: 'dashed',
-          borderColor: 'rgba(0, 229, 255, 0.35)',
-          backgroundColor: 'transparent',
-          zIndex: 99998,
-        }}
-      />
-
-      {/* Trails */}
+      <div ref={cursorRef} style={{
+        ...sharedStyle,
+        width: '7px', height: '7px',
+        borderRadius: '50%',
+        background: '#00E5FF',
+        boxShadow: '0 0 8px rgba(0,229,255,1), 0 0 20px rgba(0,229,255,0.5), 0 0 40px rgba(0,229,255,0.2)',
+      }} />
+      <div ref={followerRef} style={{
+        ...sharedStyle,
+        width: '40px', height: '40px',
+        borderRadius: '50%',
+        borderWidth: '1px',
+        borderStyle: 'dashed',
+        borderColor: 'rgba(0, 229, 255, 0.35)',
+        backgroundColor: 'transparent',
+        zIndex: 99998,
+      }} />
       {Array.from({ length: trailCount }).map((_, i) => (
-        <div
-          key={i}
-          ref={(el) => (trailsRef.current[i] = el)}
-          style={{
-            ...sharedStyle,
-            width: `${6 - i * 0.7}px`,
-            height: `${6 - i * 0.7}px`,
-            borderRadius: '50%',
-            background: `rgba(0, 229, 255, ${0.55 - i * 0.07})`,
-            boxShadow: i < 2 ? '0 0 6px rgba(0,229,255,0.4)' : 'none',
-            zIndex: 99997 - i,
-          }}
-        />
+        <div key={i} ref={(el) => (trailsRef.current[i] = el)} style={{
+          ...sharedStyle,
+          width: `${6 - i * 0.7}px`, height: `${6 - i * 0.7}px`,
+          borderRadius: '50%',
+          background: `rgba(0, 229, 255, ${0.55 - i * 0.07})`,
+          boxShadow: i < 2 ? '0 0 6px rgba(0,229,255,0.4)' : 'none',
+          zIndex: 99997 - i,
+        }} />
       ))}
     </>
   )
 }
 
+// ─── Main export ───────────────────────────────────────────────────────────
 export default function CustomCursor() {
   const isTouchDevice =
     typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
-  if (isTouchDevice) return <TouchRipple />
+  if (isTouchDevice) return <MobileTrail />
   return <DesktopCursor />
 }

@@ -32,6 +32,15 @@ export default function Navbar() {
   const logoSwapInProgress = useRef(false)
 
   useEffect(() => {
+    const setVh = () => {
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`)
+    }
+    setVh()
+    window.addEventListener('resize', setVh)
+    const menuObserver = new MutationObserver(() => {
+      const isOpen = document.body.classList.contains('menu-open')
+    })
+
     const pill = pillRef.current
     const logoFull = logoFullRef.current
     const logoShort = logoShortRef.current
@@ -103,7 +112,6 @@ export default function Navbar() {
           overwrite: true,
         })
 
-        // logo swap
         if (progress > 0.6 && !scrolled.current && !logoSwapInProgress.current) {
           scrolled.current = true
           logoSwapInProgress.current = true
@@ -140,8 +148,29 @@ export default function Navbar() {
     return () => {
       window.removeEventListener('preloader-done', handleDone)
       window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', setVh)
     }
   }, [])
+
+  const handleMenuOpen = () => {
+    const scrollY = window.scrollY
+    document.body.dataset.scrollY = String(scrollY)
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    document.body.style.touchAction = 'none'
+  }
+
+  const handleMenuClose = () => {
+    const scrollY = parseInt(document.body.dataset.scrollY || '0', 10)
+    document.body.style.overflow = ''
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.width = ''
+    document.body.style.touchAction = ''
+    window.scrollTo(0, scrollY)
+  }
 
   return (
     <>
@@ -195,11 +224,11 @@ export default function Navbar() {
     font-family: Inter, sans-serif;
     white-space: nowrap;
     line-height: 1;
-     transition: color 0.3s ease;
+    transition: color 0.3s ease;
   }
-    .nav-logo-full:hover {
-  color: #00D4FF;
-}
+  .nav-logo-full:hover {
+    color: #00D4FF;
+  }
 
   .nav-logo-short {
     position: absolute;
@@ -236,71 +265,53 @@ export default function Navbar() {
     position: relative;
   }
 
-  /* ── Magic link ── */
-.nav-link {
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: white;
-  text-decoration: none;
-  font-family: Inter, sans-serif;
-  white-space: nowrap;
-  display: inline-block;
-  position: relative;
-  opacity: 0.35;
-  transition: opacity 0.4s ease;
-  overflow: visible;
-  height: 1.2em;
-  vertical-align: middle;
-}
-
-.nav-link .link-text {
-  display: block;
-  position: relative;
-  transition: transform 0.4s cubic-bezier(0.76, 0, 0.24, 1),
-              opacity 0.4s ease;
-  line-height: 1.2em;
-}
-
-.nav-link .link-clone {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: #00D4FF;
-  transition: transform 0.4s cubic-bezier(0.76, 0, 0.24, 1),
-              opacity 0.4s ease;
-  opacity: 0;
-  pointer-events: none;
-  white-space: nowrap;
-  line-height: 1.2em;
-}
-
-.nav-link:hover {
-  opacity: 1;
-}
-
-.nav-link:hover .link-text {
-  transform: translateY(-100%);
-  opacity: 0;
-}
-
-.nav-link:hover .link-clone {
-  transform: translateY(-100%);
-  opacity: 1;
-}
-
-  /* Active state */
-  .nav-link[data-active='true'] {
-    opacity: 1;
+  .nav-link {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: white;
+    text-decoration: none;
+    font-family: Inter, sans-serif;
+    white-space: nowrap;
+    display: inline-block;
+    position: relative;
+    opacity: 0.35;
+    transition: opacity 0.4s ease;
+    overflow: visible;
+    height: 1.2em;
+    vertical-align: middle;
   }
 
-  .nav-link[data-active='true'] .link-text {
+  .nav-link .link-text {
+    display: block;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.76, 0, 0.24, 1),
+                opacity 0.4s ease;
+    line-height: 1.2em;
+  }
+
+  .nav-link .link-clone {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    text-align: center;
     color: #00D4FF;
+    transition: transform 0.4s cubic-bezier(0.76, 0, 0.24, 1),
+                opacity 0.4s ease;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    line-height: 1.2em;
   }
 
-  /* Active glow dot */
+  .nav-link:hover { opacity: 1; }
+  .nav-link:hover .link-text { transform: translateY(-100%); opacity: 0; }
+  .nav-link:hover .link-clone { transform: translateY(-100%); opacity: 1; }
+
+  .nav-link[data-active='true'] { opacity: 1; }
+  .nav-link[data-active='true'] .link-text { color: #00D4FF; }
+
   .nav-link[data-active='true']::before {
     content: '';
     position: absolute;
@@ -315,10 +326,21 @@ export default function Navbar() {
     animation: dotPulse 2s ease-in-out infinite;
   }
 
-
   @keyframes dotPulse {
     0%, 100% { opacity: 1; box-shadow: 0 0 8px 2px rgba(0,212,255,0.6); }
     50%       { opacity: 0.4; box-shadow: 0 0 4px 1px rgba(0,212,255,0.2); }
+  }
+
+  /* ── Fix 1: Mobile menu full height — browser bar ignore karo ── */
+  #mobile-menu-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* --vh se actual visible height milti hai, browser bar exclude */
+    height: calc(var(--vh, 1vh) * 100);
+    z-index: 50;
+    pointer-events: none;
   }
 `}</style>
 
@@ -347,7 +369,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Mobile only ── */}
+      {/* ── Mobile logo placeholder ── */}
       <div
         id="navbar-logo-target-mobile"
         className="md:hidden"
@@ -362,18 +384,10 @@ export default function Navbar() {
         }}
       />
 
-      {/* StaggeredMenu — sirf mobile pe, sirf button dikhayega */}
+      {/* ── Mobile menu ── */}
       <div
+        id="mobile-menu-wrapper"
         className="md:hidden"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100vh',
-          zIndex: 50,
-          pointerEvents: 'none',
-        }}
       >
         <StaggeredMenu
           position="right"
@@ -389,8 +403,8 @@ export default function Navbar() {
           logoUrl=""
           isFixed={false}
           closeOnClickAway={true}
-          onMenuOpen={() => { }}
-          onMenuClose={() => { }}
+          onMenuOpen={handleMenuOpen}
+          onMenuClose={handleMenuClose}
         />
       </div>
     </>
