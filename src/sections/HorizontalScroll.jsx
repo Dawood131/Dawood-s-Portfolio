@@ -26,87 +26,90 @@ export default function HorizontalScroll() {
         if (!section || !track) return
 
         const ctx = gsap.context(() => {
-        const totalWidth = track.scrollWidth - window.innerWidth
-const isMobile = window.innerWidth < 768
+            const isMobile = window.innerWidth < 768
 
-// ✅ Mobile pe last word center me roke — paddingRight se
-if (isMobile) {
-  track.style.paddingRight = `${window.innerWidth * 0.5}px`
-}
+            // Mobile pe last word center me roke
+            if (isMobile) {
+                track.style.paddingRight = `${window.innerWidth * 0.5}px`
+            }
 
-// ✅ Recalculate after padding
-const scrollWidth = track.scrollWidth - window.innerWidth
+            // Recalculate after padding
+            const scrollWidth = track.scrollWidth - window.innerWidth
 
-const mainAnim = gsap.to(track, {
-  x: -scrollWidth,
-  ease: 'none',
-  paused: true,
-})
+            // 1.8x — comfortable reading speed, not irritating, not rushed
+            const scrollMultiplier = isMobile ? 1.8 : 1
+            const totalScrollDistance = scrollWidth * scrollMultiplier
 
-ScrollTrigger.create({
-  trigger: section,
-  start: 'top top',
-  end: () => `+=${scrollWidth}`,
-  scrub: 1,
-  pin: true,
-  pinSpacing: true,
-  anticipatePin: 1,
-  invalidateOnRefresh: true,
-  animation: mainAnim,
-})
+            const mainAnim = gsap.to(track, {
+                x: -scrollWidth,
+                ease: 'none',
+                paused: true,
+            })
 
-if (lineRef.current) {
-  gsap.to(lineRef.current, {
-    scaleX: 1,
-    ease: 'none',
-    scrollTrigger: {
-      trigger: section,
-      start: 'top top',
-      end: () => `+=${scrollWidth}`,
-      scrub: 1,
-    },
-  })
-}
+            ScrollTrigger.create({
+                trigger: section,
+                start: 'top top',
+                end: () => `+=${totalScrollDistance}`,
+                scrub: isMobile ? 1.2 : 1,
+                pin: true,
+                pinSpacing: true,
+                anticipatePin: 1,
+                invalidateOnRefresh: true,
+                animation: mainAnim,
+            })
 
-const wordEls = track.querySelectorAll('.h-word-text')
+            if (lineRef.current) {
+                gsap.to(lineRef.current, {
+                    scaleX: 1,
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: section,
+                        start: 'top top',
+                        end: () => `+=${totalScrollDistance}`,
+                        scrub: 1,
+                    },
+                })
+            }
 
-wordEls.forEach((word) => {
-  const isOutline = word.dataset.outline === 'true'
+            const wordEls = track.querySelectorAll('.h-word-text')
 
-  gsap.set(word, {
-    color: 'rgba(255,255,255,0.08)',
-    WebkitTextStroke: isOutline ? '1.5px rgba(255,255,255,0.08)' : 'none',
-  })
+            wordEls.forEach((word) => {
+                const isOutline = word.dataset.outline === 'true'
 
-  gsap.to(word, {
-    keyframes: [
-      {
-        color: 'rgba(255,255,255,0.08)',
-        WebkitTextStroke: isOutline ? '1.5px rgba(255,255,255,0.08)' : 'none',
-        ease: 'none'
-      },
-      {
-        color: '#00D4FF',
-        WebkitTextStroke: 'none',
-        ease: 'none'
-      },
-      {
-        color: '#ffffff',
-        WebkitTextStroke: 'none',
-        ease: 'none'
-      },
-    ],
-    ease: 'none',
-    scrollTrigger: {
-      trigger: word,
-      containerAnimation: mainAnim,
-      start: 'left 95%',
-      end: 'left 5%',
-      scrub: true,
-      invalidateOnRefresh: true,
-    },
-  })
-})
+                gsap.set(word, {
+                    color: 'rgba(255,255,255,0.08)',
+                    WebkitTextStroke: isOutline ? '1.5px rgba(255,255,255,0.08)' : 'none',
+                })
+
+                gsap.to(word, {
+                    keyframes: [
+                        {
+                            color: 'rgba(255,255,255,0.08)',
+                            WebkitTextStroke: isOutline ? '1.5px rgba(255,255,255,0.08)' : 'none',
+                            ease: 'none'
+                        },
+                        {
+                            color: '#00D4FF',
+                            WebkitTextStroke: 'none',
+                            ease: 'none'
+                        },
+                        {
+                            color: '#ffffff',
+                            WebkitTextStroke: 'none',
+                            ease: 'none'
+                        },
+                    ],
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: word,
+                        containerAnimation: mainAnim,
+                        start: 'left 95%',
+                        end: 'left 5%',
+                        scrub: true,
+                        invalidateOnRefresh: true,
+                    },
+                })
+            })
 
         }, section)
 

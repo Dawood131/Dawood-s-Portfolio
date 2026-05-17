@@ -1,7 +1,112 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 
-export default function CustomCursor() {
+// ─── Mobile touch ripple ───────────────────────────────────────────────────
+function TouchRipple() {
+  const [ripples, setRipples] = useState([])
+
+  useEffect(() => {
+    const onTouch = (e) => {
+      const touch = e.touches[0]
+      const id = Date.now() + Math.random()
+      const x = touch.clientX
+      const y = touch.clientY
+
+      setRipples((prev) => [...prev, { id, x, y }])
+
+      // Remove after animation completes
+      setTimeout(() => {
+        setRipples((prev) => prev.filter((r) => r.id !== id))
+      }, 700)
+    }
+
+    window.addEventListener('touchstart', onTouch, { passive: true })
+    return () => window.removeEventListener('touchstart', onTouch)
+  }, [])
+
+  return (
+    <>
+      {ripples.map((r) => (
+        <RippleDot key={r.id} x={r.x} y={r.y} />
+      ))}
+    </>
+  )
+}
+
+function RippleDot({ x, y }) {
+  const dotRef = useRef(null)
+  const ring1Ref = useRef(null)
+  const ring2Ref = useRef(null)
+
+  useEffect(() => {
+    const dot = dotRef.current
+    const ring1 = ring1Ref.current
+    const ring2 = ring2Ref.current
+    if (!dot || !ring1 || !ring2) return
+
+    // Center dot — quick flash
+    gsap.fromTo(dot,
+      { scale: 0, opacity: 1 },
+      { scale: 1, opacity: 0, duration: 0.4, ease: 'power2.out' }
+    )
+
+    // Ring 1 — expand outward
+    gsap.fromTo(ring1,
+      { scale: 0, opacity: 0.7 },
+      { scale: 2.5, opacity: 0, duration: 0.6, ease: 'power2.out' }
+    )
+
+    // Ring 2 — slower, bigger
+    gsap.fromTo(ring2,
+      { scale: 0, opacity: 0.4 },
+      { scale: 4, opacity: 0, duration: 0.7, delay: 0.05, ease: 'power2.out' }
+    )
+  }, [])
+
+  const base = {
+    position: 'fixed',
+    top: y,
+    left: x,
+    pointerEvents: 'none',
+    zIndex: 99999,
+    transform: 'translate(-50%, -50%)',
+    borderRadius: '50%',
+  }
+
+  return (
+    <>
+      {/* Center dot */}
+      <div ref={dotRef} style={{
+        ...base,
+        width: '10px',
+        height: '10px',
+        background: '#00E5FF',
+        boxShadow: '0 0 12px rgba(0,229,255,0.8), 0 0 24px rgba(0,229,255,0.4)',
+      }} />
+
+      {/* Ring 1 */}
+      <div ref={ring1Ref} style={{
+        ...base,
+        width: '36px',
+        height: '36px',
+        border: '1.5px solid rgba(0,229,255,0.7)',
+        background: 'transparent',
+      }} />
+
+      {/* Ring 2 */}
+      <div ref={ring2Ref} style={{
+        ...base,
+        width: '36px',
+        height: '36px',
+        border: '1px solid rgba(0,229,255,0.3)',
+        background: 'transparent',
+      }} />
+    </>
+  )
+}
+
+// ─── Desktop custom cursor ─────────────────────────────────────────────────
+function DesktopCursor() {
   const cursorRef = useRef(null)
   const followerRef = useRef(null)
   const trailsRef = useRef([])
@@ -64,13 +169,7 @@ export default function CustomCursor() {
       isHovering.current = true
       const isMagnetic = e.currentTarget.dataset.magnetic !== undefined
 
-      gsap.to(cursor, {
-        scale: 0,
-        opacity: 0,
-        duration: 0.25,
-        ease: 'power3.out',
-      })
-
+      gsap.to(cursor, { scale: 0, opacity: 0, duration: 0.25, ease: 'power3.out' })
       gsap.to(follower, {
         scale: isMagnetic ? 1.5 : 1.7,
         borderColor: 'rgba(0, 229, 255, 1)',
@@ -80,28 +179,13 @@ export default function CustomCursor() {
         duration: 0.4,
         ease: 'expo.out',
       })
-
-      // Dashed ring slow rotate
-      gsap.to(follower, {
-        rotation: 360,
-        duration: 4,
-        ease: 'none',
-        repeat: -1,
-      })
+      gsap.to(follower, { rotation: 360, duration: 4, ease: 'none', repeat: -1 })
     }
 
     const onLeave = () => {
       isHovering.current = false
-
       gsap.killTweensOf(follower, 'rotation')
-
-      gsap.to(cursor, {
-        scale: 1,
-        opacity: 1,
-        duration: 0.3,
-        ease: 'power3.out',
-      })
-
+      gsap.to(cursor, { scale: 1, opacity: 1, duration: 0.3, ease: 'power3.out' })
       gsap.to(follower, {
         scale: 1,
         borderColor: 'rgba(0, 229, 255, 0.35)',
@@ -117,11 +201,7 @@ export default function CustomCursor() {
     const onClick = () => {
       gsap.timeline()
         .to(follower, { scale: isHovering.current ? 1.1 : 0.6, duration: 0.1, ease: 'power2.in' })
-        .to(follower, {
-          scale: isHovering.current ? 1.25 : 1,
-          duration: 0.55,
-          ease: 'elastic.out(1, 0.35)',
-        })
+        .to(follower, { scale: isHovering.current ? 1.25 : 1, duration: 0.55, ease: 'elastic.out(1, 0.35)' })
 
       gsap.timeline()
         .to(cursor, { scale: 3, opacity: 0, duration: 0.35, ease: 'power2.out' })
@@ -207,4 +287,13 @@ export default function CustomCursor() {
       ))}
     </>
   )
+}
+
+export default function CustomCursor() {
+  const isTouchDevice =
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+
+  if (isTouchDevice) return <TouchRipple />
+  return <DesktopCursor />
 }
